@@ -25,9 +25,8 @@ module standoff(x, y, height, diameter, hole_diameter, hole_depth, diameter_expa
     }
 }
 
-module standoff_M3(x, y, height = 8, hole_depth = 6) {
+module standoff_M3(x, y, height = 8, hole_depth = 6, hole_size = 3.9) {
     overall_diameter = 9;
-    hole_size = 3.9;
     hole_depth = height-2;
     diameter_expansion = 1.085;
     x_y_ratio=1.03;
@@ -57,8 +56,8 @@ module hole(x, y, thickness, hole_diameter) {
 
 module latch(x, y, thickness) {
     union() {
-        hole_M4(x, y, thickness, hole_diameter = 4.5);
-        hole_M4(x-25, y, thickness, hole_diameter = 4.5);
+        hole_M4(x, y, thickness+epsilon, hole_diameter = 4.5);
+        hole_M4(x-25, y, thickness+epsilon, hole_diameter = 4.5);
     }
 }
 
@@ -66,6 +65,9 @@ module quad_lc_coupler(x, y, thickness) {
     coupler_width = 26.25;
     coupler_height = 9.512;
     mounting_hole_offset = 2.225;
+    // Adjust for the reality of printing. Make opening slightly larger.
+    x = x - 0.05;
+    coupler_height = coupler_height + 0.05;
     translate([x, y, -epsilon])
         union() {
             cube([coupler_width, coupler_height, thickness + 2 * epsilon]);
@@ -101,7 +103,7 @@ module side(length, height, thickness, x = 0, y = 0, on_right = true) {
                     difference() {
                     linear_extrude(8)
                         scale([1, 1.025]) 
-                            circle(d = 3.9, $fa=1, $fs=0.5);
+                            circle(d = 3.9+0.1, $fa=1, $fs=0.5);
                 }
             }
         } else {
@@ -110,7 +112,7 @@ module side(length, height, thickness, x = 0, y = 0, on_right = true) {
                     difference() {
                     linear_extrude(10)
                         scale([1, 1.025]) 
-                            circle(d = 3.9, $fa=1, $fs=0.5);
+                            circle(d = 3.9+0.1, $fa=1, $fs=0.5);
                 }
             }
         }
@@ -187,17 +189,40 @@ module front(width, height, thickness) {
 }
 
 
+module do_text(x, y, the_text, thickness, text_size = 4.5, font = "Arial:style=Bold") {
+    text_height = 1;
+    text_base = thickness - 0.1;
+    translate([x, y, -text_height+epsilon]) linear_extrude(text_height) rotate([0, 180, 0]) text(the_text, text_size, font=font);
+}
+
 module fan_30mm(x, y, thickness) {
     fan_diameter = 28;
     mounting_hole_offset = 12;
     translate([x, y, -epsilon])
         union() {
-            cylinder(thickness + epsilon*2, d = 20, true);
-            hole_M3(-mounting_hole_offset, -mounting_hole_offset, thickness);
-            hole_M3(-mounting_hole_offset, mounting_hole_offset, thickness);
-            hole_M3(mounting_hole_offset, -mounting_hole_offset, thickness);
-            hole_M3(mounting_hole_offset, mounting_hole_offset, thickness);
+            cylinder(thickness + epsilon*2, d = fan_diameter, true);
+            hole_M3(-mounting_hole_offset, -mounting_hole_offset, thickness, hole_diameter = 3.2);
+            
+            hole_M3(-mounting_hole_offset, mounting_hole_offset, thickness, hole_diameter = 3.25);
+            
+            hole_M3(mounting_hole_offset, -mounting_hole_offset, thickness, hole_diameter = 3.3);
+
+            hole_M3(mounting_hole_offset, mounting_hole_offset, thickness, hole_diameter = 3.35);
         }
+}
+
+module fan_30mm_labels(x, y, thickness) {
+    mounting_hole_offset = 12;
+    translate([x, y, -epsilon])
+        union() {
+            do_text(-mounting_hole_offset-2, -mounting_hole_offset-1, "2", thickness, text_size = 5);
+            
+            do_text(-mounting_hole_offset-2, mounting_hole_offset-4, "25", thickness, text_size = 5);
+            
+            do_text(mounting_hole_offset+6, -mounting_hole_offset-1, "3", thickness, text_size = 5);
+
+            do_text(mounting_hole_offset+10, mounting_hole_offset-4, "35", thickness, text_size = 5);        
+            }
 }
 
 module backplane_connector_opening(x, y, thickness) {
@@ -209,15 +234,35 @@ module backplane_connector_opening(x, y, thickness) {
         };
 }
 
+/* Security slots are 2 rectangles slot_width x slot_height separated by slot_separation
+   and whose bottom is offset_from_top mm below the top of the wall.
+*/
+module security_slots(end_width, end_height, thickness) {
+    x_midpoint = end_width/2;
+    offset_from_top = 5;
+    slot_y = end_height - offset_from_top;
+    slot_height = 3;
+    slot_width = 5;
+    slot_separation = 40;
+    union() {
+        translate([x_midpoint-slot_separation/2-slot_width, slot_y, -epsilon]) cube([slot_width, slot_height, thickness+2*epsilon]);
+        translate([x_midpoint+slot_separation/2, slot_y, -epsilon]) cube([slot_width, slot_height, thickness+2*epsilon]);
+    }
+}
+
 module end(width, height, thickness, x = 0, y = 0) {
     translate([x, y, 0]) 
         rotate([90, 0, 0])
-            difference() {
-                cube([width, height, thickness]);
-                fan_30mm(22.35, 20, thickness);
-                backplane_connector_opening(64.97, 5, thickness);
-                latch(94.97, 25, thickness);
-                fan_30mm(124, 20, thickness);
+            union() {
+                difference() {
+                    cube([width, height, thickness]);
+                    fan_30mm(22.35, 20, thickness);
+                    backplane_connector_opening(64.97, 5, thickness);
+                    latch(94.97, 25, thickness);
+                    fan_30mm(124, 20, thickness);
+                    security_slots(width, height, thickness);
+                };
+                fan_30mm_labels(22.35, 20, thickness);
             }
 }
 
@@ -226,9 +271,9 @@ module bottom(width, height, thickness) {
 }
 
 union() {
-    bottom(width, length, base_thickness);
-    side(length, side_height, side_thickness, on_right = true);
-    side(length, side_height, side_thickness, width - side_thickness, on_right = false);
-    front(width, height, side_thickness);
+    //bottom(width, length, base_thickness);
+    //side(length, side_height, side_thickness, on_right = true);
+    //side(length, side_height, side_thickness, width - side_thickness, on_right = false);
+    //front(width, height, side_thickness);
     end(width, height, side_thickness, 0, length);
 }
