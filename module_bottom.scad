@@ -1,7 +1,7 @@
 // Bottom of a module
 width = 145;
 length = 40;
-height = 35;
+height = 36;
 side_height = 25;
 
 base_thickness = 1;
@@ -56,32 +56,32 @@ module hole(x, y, thickness, hole_diameter) {
 
 module latch(x, y, thickness) {
     union() {
-        hole_M4(x, y, thickness+epsilon, hole_diameter = 4.5);
-        hole_M4(x-25, y, thickness+epsilon, hole_diameter = 4.5);
+        hole_M3(x, y, thickness+epsilon, hole_diameter = 3.6);
+        hole_M3(x-25, y, thickness+epsilon, hole_diameter = 3.6);
     }
 }
 
 module quad_lc_coupler(x, y, thickness) {
     coupler_width = 26.25;
-    coupler_height = 9.512;
+    coupler_height = 9.512 + 0.2;
     mounting_hole_offset = 2.225;
     // Adjust for the reality of printing. Make opening slightly larger.
-    x = x - 0.05;
-    coupler_height = coupler_height + 0.05;
+    //x = x - 0.05;
+    //coupler_height = coupler_height + 0.05;
     translate([x, y, -epsilon])
         union() {
             cube([coupler_width, coupler_height, thickness + 2 * epsilon]);
-            hole_M2(-mounting_hole_offset, coupler_height/2, thickness);
-            hole_M2(coupler_width + mounting_hole_offset, coupler_height/2, thickness);
+            hole_M2(-mounting_hole_offset, coupler_height/2, thickness, hole_diameter=2.5);
+            hole_M2(coupler_width + mounting_hole_offset, coupler_height/2, thickness, hole_diameter=2.5);
         };
 }
 
-module side(length, height, thickness, x = 0, y = 0, on_right = true) {
+module side(length, height, thickness, x = 0, y = 0, on_left = true) {
     translate([x, y, 0]) 
     difference() {
         union() {
             cube([thickness, length, height]);
-            if (on_right) {
+            if (on_left) {
                 translate([0, 15, 10])
                 rotate([90, 0, 90]) { 
                     difference() {
@@ -97,7 +97,7 @@ module side(length, height, thickness, x = 0, y = 0, on_right = true) {
                 }
             }
         };
-        if (on_right) {
+        if (on_left) {
             translate([-epsilon*2, 15, 10])
                 rotate([90, 0, 90]) { 
                     difference() {
@@ -106,13 +106,13 @@ module side(length, height, thickness, x = 0, y = 0, on_right = true) {
                             circle(d = 3.9+0.1, $fa=1, $fs=0.5);
                 }
             }
-        } else {
+        } else { // Right
             translate([-6, 15, 10])
                 rotate([90, 0, 90]) { 
                     difference() {
                     linear_extrude(10)
                         scale([1, 1.025]) 
-                            circle(d = 3.9+0.1, $fa=1, $fs=0.5);
+                            circle(d = 3.9+0.2, $fa=1, $fs=0.5);
                 }
             }
         }
@@ -161,18 +161,18 @@ module vertical_vent_array(width, height, start_x, start_y, end_x, num_vents, th
 
 module front_panel(x, y, thickness) {
     protocase_x_origin = 12;
-    protocase_y_origin = 20;
+    protocase_y_origin = 22;
     translate([x, y, -epsilon])
         union() {
-            hole_M2(15.3-protocase_x_origin, 31.8-protocase_y_origin, thickness, 2.7); // mounting hole
-            hole_M2(15.3-protocase_x_origin, 23.3-protocase_y_origin, thickness, 2.7); // mounting hole
+            hole_M2(15.3-protocase_x_origin, 31.8-protocase_y_origin, thickness, 2.9); // mounting hole
+            hole_M2(15.3-protocase_x_origin, 23.3-protocase_y_origin, thickness, 2.9); // mounting hole
             hole(23.25-protocase_x_origin, 23.775-protocase_y_origin, thickness, 4.2); // down tact switch
             hole(23.25-protocase_x_origin, 31.325-protocase_y_origin, thickness, 4.2); // up tact switch
-            translate ([34.2-protocase_x_origin, 1.6, 0]) cube([22.74, 11.86, thickness + 2 * epsilon]); // display
-            hole(72.8-protocase_x_origin, 23.775-protocase_y_origin, thickness, 4.2); //select tact switch
-            hole(72.8-protocase_x_origin, 31.325-protocase_y_origin, thickness, 5.2); // illimunated tact switch
-            hole_M2(80.2-protocase_x_origin, 31.8-protocase_y_origin, thickness, 2.7); // mounting hole
-            hole_M2(80.2-protocase_x_origin, 23.3-protocase_y_origin, thickness, 2.7); // mounting hole
+            translate ([34.2-protocase_x_origin, 1.6-2, 0]) cube([22.74, 11.86, thickness + 2 * epsilon]); // display
+            hole(72.8-protocase_x_origin, 23.775-protocase_y_origin, thickness, 4.4); // illuminated tact switch
+            hole(72.8-protocase_x_origin, 31.325-protocase_y_origin, thickness, 5.7); // 5mm LED
+            hole_M2(80.2-protocase_x_origin, 31.8-protocase_y_origin, thickness, 2.9); // mounting hole
+            hole_M2(80.2-protocase_x_origin, 23.3-protocase_y_origin, thickness, 2.9); // mounting hole
         };
 }
 
@@ -180,7 +180,7 @@ module front(width, height, thickness) {
     rotate([90, 0, 0])
         difference() {
             cube([width, height, thickness]);
-            vertical_vent_array(width = 3, height = 10, start_x = 10, start_y = 8, end_x = width - 5, num_vents = 20, thickness = thickness);
+            vertical_vent_array(width = 3, height = 10, start_x = 10, start_y = 4, end_x = width - 5, num_vents = 20, thickness = thickness);
             vertical_vent_array(width = 3, height = 10, start_x = 3, start_y = 21.5, end_x = 11.5, num_vents = 2, thickness = thickness);   
             front_panel(12, 20, thickness);
             vertical_vent_array(width = 3, height = 10, start_x = 84.5, start_y = 21.5, end_x = 94.5, num_vents = 2, thickness = thickness);   
@@ -190,7 +190,7 @@ module front(width, height, thickness) {
 
 
 module do_text(x, y, the_text, thickness, text_size = 4.5, font = "Arial:style=Bold") {
-    text_height = 1;
+    text_height = 0.6;
     text_base = thickness - 0.1;
     translate([x, y, -text_height+epsilon]) linear_extrude(text_height) rotate([0, 180, 0]) text(the_text, text_size, font=font);
 }
@@ -271,9 +271,12 @@ module bottom(width, height, thickness) {
 }
 
 union() {
-    //bottom(width, length, base_thickness);
-    //side(length, side_height, side_thickness, on_right = true);
-    //side(length, side_height, side_thickness, width - side_thickness, on_right = false);
-    //front(width, height, side_thickness);
+    text_height = 2;
+    text_base = base_thickness-epsilon;
+    bottom(width, length, base_thickness);
+    side(length, side_height, side_thickness, on_left = true);
+    side(length, side_height, side_thickness, width - side_thickness, on_left = false);
+    front(width, height, side_thickness);
     end(width, height, side_thickness, 0, length);
+    translate([width * .75, length/2, text_base]) linear_extrude(text_height) text("#2", 4.5, font="Arial:style=Bold");
 }
