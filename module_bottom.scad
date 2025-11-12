@@ -76,47 +76,73 @@ module quad_lc_coupler(x, y, thickness) {
         };
 }
 
-module side(length, height, thickness, x = 0, y = 0, on_left = true) {
-    translate([x, y, 0]) 
-    difference() {
-        union() {
-            cube([thickness, length, height]);
-            if (on_left) {
-                translate([0, 15, 10])
-                rotate([90, 0, 90]) { 
-                    difference() {
-                        cylinder(6, d=9);
-                    }
-                }
-            } else {
-                translate([-6+thickness, 15, 10])
-                rotate([90, 0, 90]) { 
-                    difference() {
-                        cylinder(6, d=9);
-                    }
-                }
+module cover_mount_outer(x, y, on_left, thickness) {
+    mount_height = 6;
+    mount_diameter = 9;
+    if (on_left) {
+        translate([0, x, y])
+        rotate([90, 0, 90]) { 
+            cylinder(mount_height, d=mount_diameter);
+        }
+    } else {
+        translate([-mount_height+thickness, x, y])
+        rotate([90, 0, 90]) { 
+            cylinder(mount_height, d=mount_diameter);
+        }
+    };
+}
+
+module cover_mount_inner(x, y, on_left, thickness) {
+    mount_height = 6;
+    hole_diameter = 3.9+0.2;
+        if (on_left) {
+            translate([0, x, y])
+            rotate([90, 0, 90]) { 
+                translate([0, 0, -epsilon]) cylinder(mount_height+2*epsilon, d=hole_diameter, $fa=1, $fs=0.5);
+            }
+        } else {
+            translate([-6+thickness, x, y])
+            rotate([90, 0, 90]) { 
+                translate([0, 0, -epsilon]) cylinder(mount_height+2*epsilon, d=hole_diameter, $fa=1, $fs=0.5);
             }
         };
-        if (on_left) {
-            translate([-epsilon*2, 15, 10])
-                rotate([90, 0, 90]) { 
-                    difference() {
-                    linear_extrude(8)
-                        scale([1, 1.025]) 
-                            circle(d = 3.9+0.1, $fa=1, $fs=0.5);
-                }
-            }
-        } else { // Right
-            translate([-6, 15, 10])
-                rotate([90, 0, 90]) { 
-                    difference() {
-                    linear_extrude(10)
-                        scale([1, 1.025]) 
-                            circle(d = 3.9+0.2, $fa=1, $fs=0.5);
-                }
-            }
+}
+
+module side(length, height, thickness, x = 0, y = 0, on_left = true) {
+    translate([x, y, 0]) 
+        difference() {
+            union() {
+                cube([thickness, length, height]);
+                cover_mount_outer(15, 10, on_left, thickness);
+                //cover_mount_outer(35, 10, on_left, thickness);
+            };
+            cover_mount_inner(15, 10, on_left, thickness);
+            //cover_mount_inner(35, 10, on_left, thickness);
         }
-    }
+}
+
+// Triangle point up, centered at (0,0)
+module triangle(x, y, side_length, height, angle = 0, thickness) {
+    bottom_z = -epsilon;
+    top_z = height + epsilon;
+    h = 0.8660254037844386 * side_length / 3;
+    triangle_points = [
+        [-side_length/2, -h, bottom_z], //0
+        [side_length/2, -h, bottom_z], //1
+        [0, h*2, bottom_z], //2
+        [-side_length/2, -h, top_z], //3
+        [side_length/2, -h, top_z], //4
+        [0, h*2, top_z], //5
+    ];
+    triangle_faces = [
+        [0, 2, 1],
+        [0, 1, 4, 3],
+        [1, 2, 5, 4],
+        [2, 0, 3, 5],
+        [3, 4, 5]
+    ];
+     translate([x, y, thickness-epsilon]) rotate(angle) 
+        polyhedron(triangle_points, triangle_faces);
 }
 
 module vertical_vent(x, y, width, height, thickness, epsilon = 0.01) {
@@ -159,53 +185,75 @@ module vertical_vent_array(width, height, start_x, start_y, end_x, num_vents, th
     }
 }
 
+module do_text(x, y, the_text, thickness, text_size = 4.5, font = "Arial:style=Bold") {
+    text_height = 0.8;
+    text_base = thickness - 0.1;
+    translate([x, y, -text_height+epsilon]) linear_extrude(text_height) rotate([0, 180, 0]) text(the_text, text_size, font=font);
+}
+
 module front_panel(x, y, thickness) {
     protocase_x_origin = 12;
     protocase_y_origin = 22;
     translate([x, y, -epsilon])
         union() {
-            hole_M2(15.3-protocase_x_origin, 31.8-protocase_y_origin, thickness, 2.9); // mounting hole
-            hole_M2(15.3-protocase_x_origin, 23.3-protocase_y_origin, thickness, 2.9); // mounting hole
+            hole_M2(15.3-protocase_x_origin, 31.8-protocase_y_origin, thickness, 3.0); // mounting hole
+            hole_M2(15.3-protocase_x_origin, 23.3-protocase_y_origin, thickness, 3.0); // mounting hole
             hole(23.25-protocase_x_origin, 23.775-protocase_y_origin, thickness, 4.2); // down tact switch
             hole(23.25-protocase_x_origin, 31.325-protocase_y_origin, thickness, 4.2); // up tact switch
             translate ([34.2-protocase_x_origin, 1.6-2, 0]) cube([22.74, 11.86, thickness + 2 * epsilon]); // display
             hole(72.8-protocase_x_origin, 23.775-protocase_y_origin, thickness, 4.4); // illuminated tact switch
             hole(72.8-protocase_x_origin, 31.325-protocase_y_origin, thickness, 5.7); // 5mm LED
-            hole_M2(80.2-protocase_x_origin, 31.8-protocase_y_origin, thickness, 2.9); // mounting hole
-            hole_M2(80.2-protocase_x_origin, 23.3-protocase_y_origin, thickness, 2.9); // mounting hole
+            hole_M2(80.2-protocase_x_origin, 31.8-protocase_y_origin, thickness, 3.0); // mounting hole
+            hole_M2(80.2-protocase_x_origin, 23.3-protocase_y_origin, thickness, 3.0); // mounting hole
+            
         };
+}
+
+module front_panel_labels(x, y, thickness) {
+    mounting_hole_offset = 12;
+    translate([x, y, -epsilon])
+        union() {
+            do_text(-mounting_hole_offset-2, -mounting_hole_offset-1, "2", thickness, text_size = 5);
+            
+            do_text(-mounting_hole_offset-2, mounting_hole_offset-4, "25", thickness, text_size = 5);
+            
+            do_text(mounting_hole_offset+6, -mounting_hole_offset-1, "3", thickness, text_size = 5);
+
+            do_text(mounting_hole_offset+10, mounting_hole_offset-4, "35", thickness, text_size = 5);        
+            }
 }
 
 module front(width, height, thickness) {
     rotate([90, 0, 0])
-        difference() {
-            cube([width, height, thickness]);
-            vertical_vent_array(width = 3, height = 10, start_x = 10, start_y = 4, end_x = width - 5, num_vents = 20, thickness = thickness);
-            vertical_vent_array(width = 3, height = 10, start_x = 3, start_y = 21.5, end_x = 11.5, num_vents = 2, thickness = thickness);   
-            front_panel(12, 20, thickness);
-            vertical_vent_array(width = 3, height = 10, start_x = 84.5, start_y = 21.5, end_x = 94.5, num_vents = 2, thickness = thickness);   
-            quad_lc_coupler(99.375, 22, thickness);
-            vertical_vent_array(width = 3, height = 10, start_x = 133.5, start_y = 21.5, end_x = 143, num_vents = 2, thickness = thickness);        }
+        union() {
+            difference() {
+                cube([width, height, thickness]);
+                vertical_vent_array(width = 3, height = 10, start_x = 5, start_y = 4, end_x = width - 5, num_vents = 21, thickness = thickness);
+                vertical_vent_array(width = 3, height = 10, start_x = 3, start_y = 21.5, end_x = 11.5, num_vents = 2, thickness = thickness);   
+                front_panel(12, 20, thickness);
+                vertical_vent_array(width = 3, height = 10, start_x = 84.5, start_y = 21.5, end_x = 93.5, num_vents = 2, thickness = thickness);   
+                quad_lc_coupler(99.375, 22, thickness);
+                vertical_vent_array(width = 3, height = 10, start_x = 132, start_y = 21.5, end_x = 141, num_vents = 2, thickness = thickness);        
+            };
+            triangle(30, 29, 4, 1, [0, 0, 0], thickness);
+            triangle(30, 21.5, 4, 1, [0, 0, 180], thickness);
+            triangle(66, 21.5, 4, 1, [0, 0, 90], thickness);
+        }
 }
 
 
-module do_text(x, y, the_text, thickness, text_size = 4.5, font = "Arial:style=Bold") {
-    text_height = 0.6;
-    text_base = thickness - 0.1;
-    translate([x, y, -text_height+epsilon]) linear_extrude(text_height) rotate([0, 180, 0]) text(the_text, text_size, font=font);
-}
 
 module fan_30mm(x, y, thickness) {
-    fan_diameter = 28;
+    fan_diameter = 28.5;
     mounting_hole_offset = 12;
     translate([x, y, -epsilon])
         union() {
             cylinder(thickness + epsilon*2, d = fan_diameter, true);
-            hole_M3(-mounting_hole_offset, -mounting_hole_offset, thickness, hole_diameter = 3.2);
+            hole_M3(-mounting_hole_offset, -mounting_hole_offset, thickness, hole_diameter = 3.35);
             
-            hole_M3(-mounting_hole_offset, mounting_hole_offset, thickness, hole_diameter = 3.25);
+            hole_M3(-mounting_hole_offset, mounting_hole_offset, thickness, hole_diameter = 3.35);
             
-            hole_M3(mounting_hole_offset, -mounting_hole_offset, thickness, hole_diameter = 3.3);
+            hole_M3(mounting_hole_offset, -mounting_hole_offset, thickness, hole_diameter = 3.35);
 
             hole_M3(mounting_hole_offset, mounting_hole_offset, thickness, hole_diameter = 3.35);
         }
@@ -262,7 +310,7 @@ module end(width, height, thickness, x = 0, y = 0) {
                     fan_30mm(124, 20, thickness);
                     security_slots(width, height, thickness);
                 };
-                fan_30mm_labels(22.35, 20, thickness);
+                //fan_30mm_labels(22.35, 20, thickness);
             }
 }
 
@@ -271,12 +319,12 @@ module bottom(width, height, thickness) {
 }
 
 union() {
-    text_height = 2;
+    text_height = 1.25;
     text_base = base_thickness-epsilon;
     bottom(width, length, base_thickness);
     side(length, side_height, side_thickness, on_left = true);
     side(length, side_height, side_thickness, width - side_thickness, on_left = false);
     front(width, height, side_thickness);
     end(width, height, side_thickness, 0, length);
-    translate([width * .75, length/2, text_base]) linear_extrude(text_height) text("#2", 4.5, font="Arial:style=Bold");
+    translate([width * .75, length/2, text_base]) linear_extrude(text_height) text("#3", 4.5, font="Arial:style=Bold");
 }
