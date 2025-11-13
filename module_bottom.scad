@@ -54,6 +54,56 @@ module hole(x, y, thickness, hole_diameter) {
         cylinder(thickness + epsilon * 2, d = hole_diameter, true, $fa=1, $fs=0.5);
 }
 
+
+// Triangle point up, centered at (0,0)
+module triangle(x, y, side_length, height, angle = 0, thickness) {
+    bottom_z = -epsilon;
+    top_z = height + epsilon;
+    h = 0.8660254037844386 * side_length / 3;
+    triangle_points = [
+        [-side_length/2, -h, bottom_z], //0
+        [side_length/2, -h, bottom_z], //1
+        [0, h*2, bottom_z], //2
+        [-side_length/2, -h, top_z], //3
+        [side_length/2, -h, top_z], //4
+        [0, h*2, top_z], //5
+    ];
+    triangle_faces = [
+        [0, 2, 1],
+        [0, 1, 4, 3],
+        [1, 2, 5, 4],
+        [2, 0, 3, 5],
+        [3, 4, 5]
+    ];
+     translate([x, y, thickness-epsilon]) rotate(angle) 
+        polyhedron(triangle_points, triangle_faces);
+}
+
+
+
+// Triangle point up, "up" edge along y axis
+module right_triangle(x, y, x_length, y_length, triangle_thickness, angle = 0) {
+    bottom_z = -epsilon;
+    top_z = triangle_thickness + epsilon;
+    triangle_points = [
+        [0, y_length, bottom_z], //0
+        [0, 0, bottom_z], //1
+        [x_length, 0, bottom_z], //2
+        [0, y_length, top_z], //3
+        [0, 0, top_z], //4
+        [x_length, 0, top_z], //5
+    ];
+    triangle_faces = [
+        [0, 2, 1],
+        [0, 1, 4, 3],
+        [1, 2, 5, 4],
+        [2, 0, 3, 5],
+        [3, 4, 5]
+    ];
+     translate([x, y, 0]) rotate(angle) 
+        polyhedron(triangle_points, triangle_faces);
+}
+
 module latch(x, y, thickness) {
     union() {
         hole_M3(x, y, thickness+epsilon, hole_diameter = 3.6);
@@ -108,42 +158,38 @@ module cover_mount_inner(x, y, on_left, thickness) {
         };
 }
 
-module side(length, height, thickness, x = 0, y = 0, on_left = true) {
+// location is the coordinate of the center line of the brace and can be an array.
+module side_brace(location, brace_bottom_length = 10, brace_height, brace_thickness = 5, on_left, side_thickness, base_thickness) {
+    if (on_left) {
+        support_angle = [90, 0, 0];
+    } else {
+        support_angle = [90, 0, 180];
+    };
+    for (loc = location) {
+    translate([side_thickness, on_left? brace_thickness/2: -brace_thickness/2, base_thickness]) right_triangle(0, loc, brace_bottom_length, brace_height-base_thickness, brace_thickness, [90, 0, on_left? 0 : 180]);
+    }
+}
+
+/////// SIDE ////////
+// Brace locations is an array of locations for the centerlines of the braces
+module side(length, height, side_thickness, x = 0, y = 0, on_left = true, base_thickness, brace_locations = [25]) {
+
     translate([x, y, 0]) 
+
         difference() {
             union() {
-                cube([thickness, length, height]);
-                cover_mount_outer(15, 10, on_left, thickness);
+                cube([side_thickness, length, height]);
+                cover_mount_outer(15, 10, on_left, side_thickness);
                 //cover_mount_outer(35, 10, on_left, thickness);
+                side_brace(location = brace_locations, brace_height = height, on_left = on_left, side_thickness = side_thickness, base_thickness = base_thickness);
+
             };
-            cover_mount_inner(15, 10, on_left, thickness);
+            cover_mount_inner(15, 10, on_left, side_thickness);
             //cover_mount_inner(35, 10, on_left, thickness);
         }
 }
 
-// Triangle point up, centered at (0,0)
-module triangle(x, y, side_length, height, angle = 0, thickness) {
-    bottom_z = -epsilon;
-    top_z = height + epsilon;
-    h = 0.8660254037844386 * side_length / 3;
-    triangle_points = [
-        [-side_length/2, -h, bottom_z], //0
-        [side_length/2, -h, bottom_z], //1
-        [0, h*2, bottom_z], //2
-        [-side_length/2, -h, top_z], //3
-        [side_length/2, -h, top_z], //4
-        [0, h*2, top_z], //5
-    ];
-    triangle_faces = [
-        [0, 2, 1],
-        [0, 1, 4, 3],
-        [1, 2, 5, 4],
-        [2, 0, 3, 5],
-        [3, 4, 5]
-    ];
-     translate([x, y, thickness-epsilon]) rotate(angle) 
-        polyhedron(triangle_points, triangle_faces);
-}
+
 
 module vertical_vent(x, y, width, height, thickness, epsilon = 0.01) {
     triangle_length = width;
@@ -236,8 +282,8 @@ module front(width, height, thickness) {
                 vertical_vent_array(width = 3, height = 10, start_x = 132, start_y = 21.5, end_x = 141, num_vents = 2, thickness = thickness);        
             };
             triangle(30, 29, 4, 1, [0, 0, 0], thickness);
-            triangle(30, 21.5, 4, 1, [0, 0, 180], thickness);
-            triangle(66, 21.5, 4, 1, [0, 0, 90], thickness);
+            triangle(30, 22, 4, 1, [0, 0, 180], thickness);
+            triangle(66, 22, 4, 1, [0, 0, 90], thickness);
         }
 }
 
@@ -322,9 +368,9 @@ union() {
     text_height = 1.25;
     text_base = base_thickness-epsilon;
     bottom(width, length, base_thickness);
-    side(length, side_height, side_thickness, on_left = true);
-    side(length, side_height, side_thickness, width - side_thickness, on_left = false);
+    side(length, side_height, side_thickness, on_left = true, base_thickness = base_thickness);
+    side(length, side_height, side_thickness, x=width-side_thickness, on_left = false, base_thickness = base_thickness);
     front(width, height, side_thickness);
     end(width, height, side_thickness, 0, length);
-    translate([width * .75, length/2, text_base]) linear_extrude(text_height) text("#3", 4.5, font="Arial:style=Bold");
+    translate([width * .75, length/2, text_base]) linear_extrude(text_height) text("#4", 4.5, font="Arial:style=Bold");
 }
