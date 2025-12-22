@@ -1,3 +1,9 @@
+include <vents.scad>
+include <fans.scad>
+include <security_slots.scad>
+include <holes.scad>
+include <standoff.scad>
+
 // Bottom of a module
 width = 145;
 length = 40;
@@ -8,52 +14,6 @@ base_thickness = 1;
 side_thickness = 1;
 
 epsilon = 0.01;
-
-module hole(diameter, depth, along_across_ratio = 1.025) {
-    linear_extrude(depth+0.1)
-        scale([1, along_across_ratio]) 
-            circle(d = diameter, $fa=1, $fs=0.5);
-}
-
-
-module standoff(x, y, height, diameter, hole_diameter, hole_depth, diameter_expansion = 1.08, x_y_ratio) {
-    translate([x, y, 0]) difference() {
-        cylinder(h=height, d=diameter);
-        translate([0, 0, height-hole_depth]) 
-            hole(hole_diameter*diameter_expansion, hole_depth, x_y_ratio);
-//            cylinder(h=hole_depth+.01, d=hole_diameter, $fa=1, $fs=0.5);
-    }
-}
-
-module standoff_M3(x, y, height = 8, hole_depth = 6, hole_size = 3.9) {
-    overall_diameter = 9;
-    hole_depth = height-2;
-    diameter_expansion = 1.085;
-    x_y_ratio=1.03;
-    standoff(x, y, height, overall_diameter, hole_size, hole_depth, diameter_expansion, x_y_ratio);
-}
-
-module hole_M2(x, y, thickness, hole_diameter = 2.3) {
-    translate([x, y, 0])
-        cylinder(thickness + epsilon * 2, d = hole_diameter, true, $fa=1, $fs=0.5);
-}
-
-
-module hole_M3(x, y, thickness, hole_diameter = 3.2) {
-    translate([x, y, 0])
-        cylinder(thickness + epsilon * 2, d = hole_diameter, true, $fa=1, $fs=0.5);
-}
-
-module hole_M4(x, y, thickness, hole_diameter = 4.5) {
-    translate([x, y, 0])
-        cylinder(thickness + epsilon * 2, d = hole_diameter, true, $fa=1, $fs=0.5);
-}
-
-module hole(x, y, thickness, hole_diameter) {
-    translate([x, y, 0])
-        cylinder(thickness + epsilon * 2, d = hole_diameter, true, $fa=1, $fs=0.5);
-}
-
 
 // Triangle point up, centered at (0,0)
 module triangle(x, y, side_length, height, angle = 0, thickness) {
@@ -189,48 +149,6 @@ module side(length, height, side_thickness, x = 0, y = 0, on_left = true, base_t
         }
 }
 
-
-
-module vertical_vent(x, y, width, height, thickness, epsilon = 0.01) {
-    triangle_length = width;
-    bottom_z = -epsilon;
-    top_z = thickness + epsilon;
-    vent_points = [
-        [width/2, 0, bottom_z], //0
-        [width, triangle_length, bottom_z], //1
-        [width, height - triangle_length, bottom_z], //2
-        [width/2, height, bottom_z], //3
-        [0, height-triangle_length, bottom_z], //4
-        [0, triangle_length, bottom_z], //5
-        [width/2, 0, top_z], //6
-        [width, triangle_length, top_z], //7
-        [width, height - triangle_length, top_z], //8
-        [width/2, height, top_z], //9
-        [0, height-triangle_length, top_z], //10
-        [0, triangle_length, top_z]]; //11
-    vent_faces = [
-        [0, 6, 7, 1],
-        [1, 7, 8, 2],
-        [2, 8, 9, 3],
-        [3, 9, 10, 4],
-        [4, 10, 11, 5],
-        [5, 11, 6, 0],
-        [0, 1, 2, 3, 4, 5],
-        [11, 10, 9, 8, 7, 6]];
-    
-    translate([x, y]) 
-        polyhedron(vent_points, vent_faces);
-}
-
-module vertical_vent_array(width, height, start_x, start_y, end_x, num_vents, thickness, min_space_between_vents = 2.5) {
-    space_between_vents = (end_x - start_x - num_vents * width)/(num_vents - 1);
-    assert(space_between_vents >= min_space_between_vents, "Not enough space between vents");
-    vent_to_vent_offset = width + space_between_vents;
-    for (i = [0:num_vents-1]) {
-        vertical_vent(start_x + i * vent_to_vent_offset, start_y, width, height, thickness);
-    }
-}
-
 module do_text(x, y, the_text, thickness, text_size = 4.5, font = "Arial:style=Bold") {
     text_height = 0.8;
     text_base = thickness - 0.1;
@@ -289,35 +207,6 @@ module front(width, height, thickness) {
 
 
 
-module fan_30mm(x, y, thickness) {
-    fan_diameter = 28.5;
-    mounting_hole_offset = 12;
-    translate([x, y, -epsilon])
-        union() {
-            cylinder(thickness + epsilon*2, d = fan_diameter, true);
-            hole_M3(-mounting_hole_offset, -mounting_hole_offset, thickness, hole_diameter = 3.35);
-            
-            hole_M3(-mounting_hole_offset, mounting_hole_offset, thickness, hole_diameter = 3.35);
-            
-            hole_M3(mounting_hole_offset, -mounting_hole_offset, thickness, hole_diameter = 3.35);
-
-            hole_M3(mounting_hole_offset, mounting_hole_offset, thickness, hole_diameter = 3.35);
-        }
-}
-
-module fan_30mm_labels(x, y, thickness) {
-    mounting_hole_offset = 12;
-    translate([x, y, -epsilon])
-        union() {
-            do_text(-mounting_hole_offset-2, -mounting_hole_offset-1, "2", thickness, text_size = 5);
-            
-            do_text(-mounting_hole_offset-2, mounting_hole_offset-4, "25", thickness, text_size = 5);
-            
-            do_text(mounting_hole_offset+6, -mounting_hole_offset-1, "3", thickness, text_size = 5);
-
-            do_text(mounting_hole_offset+10, mounting_hole_offset-4, "35", thickness, text_size = 5);        
-            }
-}
 
 module backplane_connector_opening(x, y, thickness) {
     width = 35;
@@ -328,21 +217,7 @@ module backplane_connector_opening(x, y, thickness) {
         };
 }
 
-/* Security slots are 2 rectangles slot_width x slot_height separated by slot_separation
-   and whose bottom is offset_from_top mm below the top of the wall.
-*/
-module security_slots(end_width, end_height, thickness) {
-    x_midpoint = end_width/2;
-    offset_from_top = 5;
-    slot_y = end_height - offset_from_top;
-    slot_height = 3;
-    slot_width = 5;
-    slot_separation = 40;
-    union() {
-        translate([x_midpoint-slot_separation/2-slot_width, slot_y, -epsilon]) cube([slot_width, slot_height, thickness+2*epsilon]);
-        translate([x_midpoint+slot_separation/2, slot_y, -epsilon]) cube([slot_width, slot_height, thickness+2*epsilon]);
-    }
-}
+
 
 module end(width, height, thickness, x = 0, y = 0) {
     translate([x, y, 0]) 
